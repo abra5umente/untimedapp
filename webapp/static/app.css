@@ -22,6 +22,22 @@
   --glow: 0 0 10px rgba(0, 229, 255, 0.35), 0 0 22px rgba(0, 188, 212, 0.15);
 }
 
+:root[data-theme="blue"] {
+  --line: rgba(3, 20, 250, 0.25);
+  --line-strong: rgba(3, 19, 250, 0.459);
+  --primary: #001aff;
+  --accent: #0e00d4;
+  --glow: 0 0 10px rgba(0, 38, 255, 0.35), 0 0 22px rgba(0, 14, 212, 0.15);
+}
+
+:root[data-theme="red"] {
+  --line: rgba(250, 3, 3, 0.25);
+  --line-strong: rgba(250, 3, 3, 0.459);
+  --primary: #ff0000;
+  --accent: #d40000;
+  --glow: 0 0 10px rgba(255, 0, 0, 0.35), 0 0 22px rgba(212, 0, 0, 0.15);
+}
+
 :root[data-theme="violet"] {
   --line: rgba(162, 91, 255, 0.25);
   --line-strong: rgba(162, 91, 255, 0.6);
