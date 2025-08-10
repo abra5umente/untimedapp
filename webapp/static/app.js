@@ -15,8 +15,15 @@ import { ClockWidget } from './widgets/ClockWidget.js';
     btnClear: $("#clear"),
     btnOpenSettings: $("#open-settings"),
     btnOpenNotes: $("#open-notes"),
-    modal: $("#settings-modal"),
+    btnOpenStats: $("#open-stats"),
+    // controls drawer
+    controlsDrawer: $("#controls-drawer"),
+    controlsToggle: $("#controls-toggle"),
+    controlsClose: $("#controls-close"),
+    settingsPanel: $("#settings-panel"),
     notesPanel: $("#notes-panel"),
+    statsPanel: $("#stats-panel"),
+    mainGrid: $("#main-grid"),
     // settings
     form: $("#settings-form"),
     session: $("#session"),
@@ -36,6 +43,10 @@ import { ClockWidget } from './widgets/ClockWidget.js';
     btnClearNotes: $("#clear-notes"),
     btnExportNotes: $("#export-notes"),
     btnClearLocalData: $("#clear-local-data"),
+    // stats values
+    statWork: $("#stat-work"),
+    statBreak: $("#stat-break"),
+    statSessions: $("#stat-sessions"),
   };
 
   // glyph color follows theme primary
@@ -232,6 +243,11 @@ import { ClockWidget } from './widgets/ClockWidget.js';
 
     // synchronize beat driver with current state
     updateBeatDriver(s);
+
+    // refresh stats UI + keep side panes aligned
+    updateStatsUI();
+    syncNotesHeight();
+    syncStatsHeight();
   }
 
   function trackPhaseTransitions(prev, s) {
@@ -388,40 +404,187 @@ import { ClockWidget } from './widgets/ClockWidget.js';
         applyTheme(els.theme.value);
       }
       refresh();
-      // close modal on save
-      if (els.modal) els.modal.classList.remove("open");
+      // collapse settings panel after save
+      if (els.settingsPanel) els.settingsPanel.classList.remove('open');
     } catch (e) {
       setMessage("failed to save settings. check values.");
     }
   });
 
-  // open modal
-  if (els.btnOpenSettings && els.modal) {
+  // open settings inside drawer
+  if (els.btnOpenSettings) {
     els.btnOpenSettings.addEventListener("click", async () => {
-      try { await loadConfig(); } catch {}
-      els.modal.classList.add("open");
+      // ensure drawer is open
+      ensureDrawerOpen();
+      const wasOpen = els.settingsPanel && els.settingsPanel.classList.contains('open');
+      const willOpen = !wasOpen;
+      if (els.settingsPanel) els.settingsPanel.classList.toggle('open', willOpen);
+      // arrow: right when collapsed, down when expanded
+      const arrow = els.btnOpenSettings.querySelector('.arrow');
+      if (arrow) arrow.textContent = willOpen ? '▾' : '▸';
+      if (willOpen) { try { await loadConfig(); } catch {} }
     });
-    // backdrop click closes
-    els.modal.addEventListener("click", (e) => {
-      if (e.target === els.modal) {
-        els.modal.classList.remove("open");
+  }
+
+  // toggle notes side pane next to timer
+  if (els.btnOpenNotes && els.notesPanel) {
+    // collapsed by default
+    els.notesPanel.classList.remove("open");
+    els.btnOpenNotes.classList.remove("open");
+    const setNotesOpen = async (open) => {
+      els.notesPanel.classList.toggle('open', !!open);
+      els.btnOpenNotes.classList.toggle('open', !!open);
+      if (els.mainGrid) els.mainGrid.classList.toggle('notes-open', !!open);
+      const arrow = els.btnOpenNotes.querySelector('.arrow');
+      if (arrow) arrow.textContent = open ? '-' : '+';
+      // schedule height sync to avoid snap during layout transition
+      if (open) scheduleSyncHeights(); else els.notesPanel.style.removeProperty('height');
+      if (open) { try { await loadNotes(); } catch {} }
+    };
+    els.btnOpenNotes.addEventListener("click", async () => {
+      // ensure drawer is open for visibility of toggle; but keep pane placement next to timer
+      ensureDrawerOpen();
+      await setNotesOpen(!els.notesPanel.classList.contains('open'));
+    });
+  }
+
+  // toggle statistics side pane next to timer
+  if (els.btnOpenStats && els.statsPanel) {
+    els.statsPanel.classList.remove('open');
+    els.btnOpenStats.classList.remove('open');
+    const setStatsOpen = async (open) => {
+      els.statsPanel.classList.toggle('open', !!open);
+      els.btnOpenStats.classList.toggle('open', !!open);
+      if (els.mainGrid) els.mainGrid.classList.toggle('stats-open', !!open);
+      const arrow = els.btnOpenStats.querySelector('.arrow');
+      if (arrow) arrow.textContent = open ? '-' : '+';
+      if (open) { updateStatsUI(); scheduleSyncHeights(); } else if (els.statsPanel) { els.statsPanel.style.removeProperty('height'); }
+    };
+    els.btnOpenStats.addEventListener('click', async () => {
+      ensureDrawerOpen();
+      await setStatsOpen(!els.statsPanel.classList.contains('open'));
+    });
+  }
+
+  function secondsToHHMM(sec) {
+    const s = Math.max(0, Math.floor(Number(sec || 0)));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(h)}:${pad(m)}`;
+  }
+
+  function computeTotalsSeconds() {
+    const list = loadCycles();
+    let work = 0;
+    let brk = 0;
+    const now = Date.now();
+    for (const cyc of list) {
+      const ws = Number(cyc?.work?.start_ts || 0);
+      const we = Number(cyc?.work?.end_ts || 0);
+      if (ws && we && we > ws) work += (we - ws) / 1000;
+      const bs = Number(cyc?.break?.start_ts || 0);
+      const be = Number(cyc?.break?.end_ts || 0);
+      if (bs && be && be > bs) brk += (be - bs) / 1000;
+    }
+    // include current running interval if any
+    try {
+      const s = lastState || {};
+      if (s.phase === 'work') {
+        // find currentCycle start
+        if (typeof currentCycle === 'object' && currentCycle?.work?.start_ts && !currentCycle?.work?.end_ts) {
+          work += (now - Number(currentCycle.work.start_ts)) / 1000;
+        }
+      } else if (s.phase === 'break') {
+        if (typeof currentCycle === 'object' && currentCycle?.break?.start_ts && !currentCycle?.break?.end_ts) {
+          brk += (now - Number(currentCycle.break.start_ts)) / 1000;
+        }
+      }
+    } catch {}
+    return { work, brk };
+  }
+
+  function updateStatsUI() {
+    if (!els.statWork || !els.statBreak || !els.statSessions) return;
+    const t = computeTotalsSeconds();
+    els.statWork.textContent = secondsToHHMM(t.work);
+    els.statBreak.textContent = secondsToHHMM(t.brk);
+    // sessions from backend state if available
+    const s = lastState || {};
+    const cnt = typeof s.pomodoros_completed === 'number' ? s.pomodoros_completed : (loadCycles().length || 0);
+    els.statSessions.textContent = String(cnt);
+  }
+
+  // Ensure notes panel matches the combined height of the left stack
+  function syncNotesHeight() {
+    try {
+      if (!els.notesPanel || !els.notesPanel.classList.contains('open')) return;
+      const left = document.querySelector('.main-left');
+      if (!left) return;
+      const h = Math.ceil(left.getBoundingClientRect().height);
+      if (h > 0) {
+        els.notesPanel.style.height = `${h}px`;
+      }
+    } catch {}
+  }
+
+  // Ensure stats panel matches the combined height of the left stack
+  function syncStatsHeight() {
+    try {
+      if (!els.statsPanel || !els.statsPanel.classList.contains('open')) return;
+      const left = document.querySelector('.main-left');
+      if (!left) return;
+      const h = Math.ceil(left.getBoundingClientRect().height);
+      if (h > 0) {
+        els.statsPanel.style.height = `${h}px`;
+      }
+    } catch {}
+  }
+
+  function scheduleSyncHeights() {
+    // run on next frame and after CSS transition (~350ms)
+    requestAnimationFrame(() => { syncNotesHeight(); });
+    setTimeout(() => { syncNotesHeight(); }, 380);
+  }
+
+  // also resync when left column finishes its max-width transition
+  const leftCol = document.querySelector('.main-left');
+  if (leftCol) {
+    leftCol.addEventListener('transitionend', (e) => {
+      if (!e || !e.propertyName) return scheduleSyncHeights();
+      if (e.propertyName.includes('max-width') || e.propertyName.includes('width')) {
+        scheduleSyncHeights();
       }
     });
   }
 
-  // toggle inline notes panel below timer
-  if (els.btnOpenNotes && els.notesPanel) {
-    // start with collapsed by default
-    els.notesPanel.classList.remove("open");
-    els.btnOpenNotes.classList.remove("open");
-    els.btnOpenNotes.addEventListener("click", async () => {
-      const isOpen = els.notesPanel.classList.toggle("open");
-      els.btnOpenNotes.classList.toggle("open", isOpen);
-      if (isOpen) {
-        try { await loadNotes(); } catch {}
-      }
-    });
+  // Controls drawer: collapsed by default
+  function ensureDrawerOpen() {
+    const drawer = els.controlsDrawer;
+    const toggle = els.controlsToggle;
+    if (!drawer || !toggle) return;
+    if (!drawer.classList.contains('open')) {
+      toggle.click();
+    }
   }
+
+  (function initControlsDrawer() {
+    const drawer = els.controlsDrawer;
+    const toggle = els.controlsToggle;
+    const closeBtn = els.controlsClose;
+    if (!drawer || !toggle) return;
+    const setOpen = (open) => {
+      drawer.classList.toggle('open', !!open);
+      toggle.classList.toggle('open', !!open);
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      // arrow: right when expanded, down when collapsed
+      toggle.textContent = open ? 'controls ▸' : 'controls ▾';
+      updateDrawerPadding();
+    };
+    setOpen(false);
+    toggle.addEventListener('click', () => setOpen(!drawer.classList.contains('open')));
+    if (closeBtn) closeBtn.addEventListener('click', () => setOpen(false));
+  })();
 
   // Kickoff
   // theme helpers
@@ -474,6 +637,8 @@ import { ClockWidget } from './widgets/ClockWidget.js';
   loadConfig();
   refresh();
   setInterval(refresh, 1000);
+  // initial layout measurement
+  updateDrawerPadding();
 
   // notes wiring
   loadNotes();
@@ -898,4 +1063,18 @@ import { ClockWidget } from './widgets/ClockWidget.js';
   function triggerConfettiBurst() {
     if (confetti && typeof confetti.burstAtClock === 'function') confetti.burstAtClock();
   }
+
+  // Drawer left padding updater (keeps content clear of fixed tab)
+  function updateDrawerPadding() {
+    try {
+      const btn = els.controlsToggle;
+      const drawer = els.controlsDrawer;
+      if (!btn || !drawer) return;
+      const rect = btn.getBoundingClientRect();
+      const pad = Math.ceil(rect.width) + 12; // extra gap
+      drawer.style.setProperty('--drawer-left-pad', `${pad}px`);
+    } catch {}
+  }
+  window.addEventListener('resize', updateDrawerPadding);
+  window.addEventListener('resize', () => { syncNotesHeight(); });
 })();

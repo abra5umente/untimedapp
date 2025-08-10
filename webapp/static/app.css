@@ -74,7 +74,7 @@ body {
   position: relative;
 }
 
-.page { min-height: 100%; display: grid; grid-template-rows: auto 1fr auto; position: relative; z-index: 1; }
+.page { height: 100vh; display: grid; grid-template-rows: auto 1fr auto; position: relative; z-index: 1; }
 
 .header { text-align: center; padding: 28px 16px 8px; position: relative; }
 .header h1 { margin: 0; letter-spacing: 1px; font-weight: 800; color: var(--fg); text-shadow: 0 0 8px var(--line-strong); }
@@ -84,10 +84,28 @@ body {
 .tag { margin-top: 6px; color: var(--muted); font-size: 0.9rem; letter-spacing: 0.08em; }
 
 .container {
-  max-width: 980px; margin: 0 auto; padding: 20px;
+  max-width: 1600px; margin: 0 auto; padding: 20px;
   display: grid; gap: 20px; grid-template-columns: 1fr;
-  justify-items: center; align-self: center;
+  justify-items: center; align-self: stretch; overflow: hidden;
 }
+
+/* Main grid that holds the left timer stack and optional side notes pane */
+.main-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr auto; /* left + one side pane */
+  align-items: start;
+  justify-content: center;
+  width: 100%;
+}
+/* when both notes and stats are open, show three columns */
+.main-grid.notes-open.stats-open { grid-template-columns: 1fr auto auto; }
+.main-left {
+  display: grid; gap: 20px; align-content: start;
+  max-width: 1000px; width: 100%; justify-self: center;
+  transition: max-width .3s ease;
+}
+/* Keep left stack width stable; do not shrink on side panes */
 
 /* Panels: squared edges, neon lines */
 .glass {
@@ -135,11 +153,50 @@ body {
   position: fixed; inset: 0; z-index: 40; pointer-events: none;
 }
 
-.clock-card { padding: 18px 24px; display: grid; gap: 6px; justify-items: center; width: 100%; max-width: 720px; }
-.timer-card { padding: 24px; display: grid; gap: 16px; align-content: start; width: 100%; max-width: 720px; }
+.clock-card { padding: 18px 24px; display: grid; gap: 6px; justify-items: center; width: 100%; max-width: 1000px; overflow: hidden; }
+/* keep clock-card width stable */
+.timer-card { padding: 24px; display: grid; gap: 16px; align-content: start; width: 100%; max-width: 1000px; }
+/* keep timer-card width stable */
 .notes { padding: 18px; display: grid; gap: 10px; width: 100%; max-width: 980px; }
-.notes-collapsible { display: none; }
-.notes-collapsible.open { display: block; }
+.main-grid .notes { max-width: none; height: fit-content; }
+.notes-collapsible {
+  overflow: hidden;
+  width: 0;
+  opacity: 0;
+  transform: translateX(12px);
+  transition: width .35s ease, opacity .25s ease, transform .35s ease;
+  pointer-events: none;
+}
+.notes-collapsible.open {
+  width: min(45vw, 520px);
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+  overflow: auto;
+}
+
+/* Statistics panel mirrors notes behavior */
+.stats { padding: 18px; display: grid; gap: 12px; width: 100%; max-width: 980px; }
+.main-grid .stats { max-width: none; height: fit-content; }
+.stats-collapsible {
+  overflow: hidden;
+  width: 0;
+  opacity: 0;
+  transform: translateX(12px);
+  transition: width .35s ease, opacity .25s ease, transform .35s ease;
+  pointer-events: none;
+}
+.stats-collapsible.open {
+  width: min(45vw, 520px);
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.stats-title { margin: 0; font-size: 1.05rem; color: var(--primary); letter-spacing: 0.06em; font-weight: 800; }
+.stats-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.stat { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; border: 1px solid var(--line); padding: 10px; background: #061427; }
+.stat-label { color: var(--muted); font-weight: 700; letter-spacing: 0.05em; }
+.stat-value { color: var(--fg); font-weight: 800; letter-spacing: 0.04em; }
 .notes-title { margin: 0; font-size: 1.05rem; color: var(--primary); letter-spacing: 0.06em; font-weight: 800; }
 .notes-subtitle { margin: 6px 0; font-size: 0.95rem; color: var(--muted); font-weight: 800; letter-spacing: 0.05em; }
 .notes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
@@ -190,20 +247,23 @@ body {
 }
 .muted { color: var(--muted); }
 .clock {
-  font-size: 76px; line-height: 1; font-weight: 900; letter-spacing: 3px; text-align: center; padding: 14px 0 4px;
+  font-size: clamp(120px, 16vw, 300px);
+  line-height: 1; font-weight: 900; letter-spacing: 4px; text-align: center; padding: 18px 0 8px;
   color: var(--primary);
   /* keep a subtle local highlight; heavy glow comes from ::before */
   text-shadow: 0 0 3px var(--line-strong), 0 0 8px var(--line);
   position: relative;
   /* prevent inherited animation from adding drop-shadows directly on text */
   filter: none !important;
+  max-width: 100%;
+  white-space: nowrap;
 }
 .clock.pulse, .clock.pulse-fast { /* beat-driven via ::before; no CSS animation */ }
 .clock.dim { opacity: 0.55; }
 .clock::before {
   /* back-glow layer: sits behind the numerals */
   content: "";
-  position: absolute; inset: -10px -24px; pointer-events: none;
+  position: absolute; inset: -6px -12px; pointer-events: none;
   background: radial-gradient(ellipse at center, var(--line-strong) 0%, var(--line) 30%, rgba(0,0,0,0) 70%);
   filter: blur(22px);
   opacity: 0.45;
@@ -421,8 +481,8 @@ body {
 .footer a:hover { text-decoration: underline; }
 
 /* Arrow rotation for notes button */
-#open-notes .arrow { display: inline-block; transition: transform .2s ease; }
-#open-notes.open .arrow { transform: rotate(90deg); }
+#open-notes .arrow { display: inline-block; }
+#open-notes.open .arrow { /* arrow text toggled via JS; no rotation */ }
 
 /* Basic markdown body styling in preview */
 .markdown-body { line-height: 1.55; }
@@ -439,3 +499,73 @@ body {
 .markdown-body ul, .markdown-body ol { padding-left: 1.4em; margin: 0.4em 0; }
 .markdown-body blockquote { margin: 0.6em 0; padding-left: 1em; border-left: 3px solid var(--line-strong); color: var(--primary); }
 .markdown-body hr { border: none; height: 1px; background: var(--line); margin: 1em 0; }
+
+/* Left-side controls drawer */
+.controls-drawer {
+  position: fixed;
+  top: 70px; bottom: 70px; left: 0;
+  width: 0; /* animate width like notes */
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  box-shadow: 8px 0 20px rgba(0,0,0,0.4), var(--glow);
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: width .35s ease, opacity .25s ease, transform .35s ease;
+  z-index: 45;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  overflow: hidden; /* prevent peeking while closed */
+  padding-left: var(--drawer-left-pad, 44px); /* keep content clear of the fixed controls tab */
+  pointer-events: none;
+}
+.controls-drawer.open {
+  width: min(90vw, 440px);
+  opacity: 1;
+  transform: translateX(0);
+  overflow: auto;
+  pointer-events: auto;
+}
+.drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px; border-bottom: 1px solid var(--line); }
+.drawer-title { margin: 0; font-size: 1rem; color: var(--primary); letter-spacing: 0.06em; font-weight: 800; }
+.drawer-close { padding: 6px 10px; }
+.controls-drawer .controls { padding: 12px; display: grid; grid-template-columns: 1fr; gap: 10px; align-content: start; overflow: auto; }
+
+/* Drawer sections (collapsible) */
+.drawer-section { border-top: 1px solid var(--line); }
+.drawer-collapsible {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: max-height .35s ease, opacity .25s ease, transform .35s ease;
+  pointer-events: none;
+}
+.drawer-collapsible.open {
+  max-height: 1200px; /* ample room for form */
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Toggle tab */
+.controls-toggle {
+  position: fixed;
+  left: 0; top: 50%; transform: translateY(-50%);
+  padding: 10px 12px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-right: 1px solid var(--line-strong);
+  border-left: none;
+  background: linear-gradient(90deg, var(--line), var(--line));
+  border-color: var(--line-strong);
+  color: var(--fg);
+  z-index: 46;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transition: none; /* prevent janky movement */
+}
+.controls-toggle.open { box-shadow: 0 0 8px var(--line-strong); }
+.controls-toggle:active { transform: translateY(-50%); }
+
+/* Make sure base grid for old .controls doesn't override drawer layout */
+.controls-drawer .controls .btn { width: 100%; justify-self: stretch; }

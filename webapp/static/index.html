@@ -16,107 +16,146 @@
       </header>
 
       <main class="container">
-        <!-- Dedicated clock window above controls -->
-        <section class="clock-card glass">
-          <div id="clock" class="clock" data-text="25:00">25:00</div>
-          <div id="overtime-pill" class="overtime-pill" aria-live="polite" aria-atomic="true">overtime</div>
-        </section>
+        <div class="main-grid" id="main-grid">
+          <div class="main-left">
+            <!-- Dedicated clock window above controls -->
+            <section class="clock-card glass">
+              <div id="clock" class="clock" data-text="25:00">25:00</div>
+              <div id="overtime-pill" class="overtime-pill" aria-live="polite" aria-atomic="true">overtime</div>
+            </section>
 
-        <section class="timer-card glass">
-          <div class="status-row">
-            <span id="phase" class="badge">idle</span>
-            <span id="count" class="muted">sessions: 0</span>
+            <section class="timer-card glass">
+              <div class="status-row">
+                <span id="phase" class="badge">idle</span>
+                <span id="count" class="muted">sessions: 0</span>
+              </div>
+              <div id="message" class="message"></div>
+              <div class="controls">
+                <button id="start" class="btn primary">start work</button>
+                <button id="break" class="btn">take break</button>
+                <button id="stop" class="btn">pause</button>
+                <button id="reset" class="btn">reset</button>
+                <button id="clear" class="btn danger">clear</button>
+              </div>
+            </section>
           </div>
-          <div id="message" class="message"></div>
-          <div class="controls">
-            <button id="start" class="btn primary">start work</button>
-            <button id="break" class="btn">take break</button>
-            <button id="stop" class="btn">pause</button>
-            <button id="reset" class="btn">reset</button>
-            <button id="clear" class="btn danger">clear</button>
-            <button id="open-settings" class="btn">settings</button>
-            <button id="open-notes" class="btn">notes <span class="arrow" aria-hidden="true">▸</span></button>
-          </div>
-        </section>
 
-        <!-- inline, collapsible notes under the main timer -->
-        <section id="notes-panel" class="notes glass notes-collapsible">
-          <h2 class="notes-title">notes</h2>
-          <div class="notes-grid">
-            <div class="notes-col">
-              <h3 class="notes-subtitle">editor</h3>
-              <textarea id="notes" rows="10" placeholder="jot thoughts in markdown…"></textarea>
+          <!-- side notes panel next to timer, collapsed by default -->
+          <section id="notes-panel" class="notes glass notes-collapsible">
+            <h2 class="notes-title">notes</h2>
+            <div class="notes-grid">
+              <div class="notes-col">
+                <h3 class="notes-subtitle">editor</h3>
+                <textarea id="notes" rows="10" placeholder="jot thoughts in markdown…"></textarea>
+              </div>
+              <div class="notes-col">
+                <h3 class="notes-subtitle">preview</h3>
+                <div id="notes-preview" class="notes-preview markdown-body"></div>
+              </div>
             </div>
-            <div class="notes-col">
-              <h3 class="notes-subtitle">preview</h3>
-              <div id="notes-preview" class="notes-preview markdown-body"></div>
+            <div class="notes-actions">
+              <button id="save-notes" class="btn">save notes</button>
+              <button id="clear-notes" class="btn danger">clear notes</button>
+              <button id="export-notes" class="btn">export markdown</button>
             </div>
-          </div>
-          <div class="notes-actions">
-            <button id="save-notes" class="btn">save notes</button>
-            <button id="clear-notes" class="btn danger">clear notes</button>
-            <button id="export-notes" class="btn">export markdown</button>
-          </div>
-          <div class="notes-actions">
-            <button id="clear-local-data" class="btn">clear local data</button>
-          </div>
-          <p class="notes-footnote muted">notes are saved locally in your browser and never uploaded.</p>
-        </section>
+            <div class="notes-actions">
+              <button id="clear-local-data" class="btn">clear local data</button>
+            </div>
+            <p class="notes-footnote muted">notes are saved locally in your browser and never uploaded.</p>
+          </section>
 
-        <!-- settings modal as bottom sheet -->
-        <div id="settings-modal" class="modal">
-          <div class="modal-sheet glass settings">
-            <h2>settings</h2>
-            <form id="settings-form">
-              <label>
-                session (min)
-                <input type="number" step="0.5" min="1" id="session" />
-              </label>
-              <label>
-                short break (min)
-                <input type="number" step="0.5" min="1" id="short" />
-              </label>
-              <label>
-                long break (min)
-                <input type="number" step="0.5" min="1" id="long" />
-              </label>
-              <label>
-                threshold
-                <input type="number" step="1" min="1" id="threshold" />
-              </label>
-              <label>
-                theme
-                <select id="theme">
-                  <option value="cyan">cyan</option>
-                  <option value="violet">violet</option>
-                  <option value="amber">amber</option>
-                  <option value="green">green</option>
-                  <option value="red">red</option>
-                  <option value="blue">blue</option>
-                </select>
-              </label>
-              <label>
-                scanlines
-                <div style="display:flex; gap:10px; align-items:center;">
-                  <input type="checkbox" id="scanlines-enabled" checked />
-                  <span class="muted">enable</span>
-                </div>
-              </label>
-              <label>
-                scanlines opacity
-                <div style="display:flex; gap:8px; align-items:center;">
-                  <input type="range" id="scanlines" min="0" max="1" step="0.01" />
-                  <span id="scanlines-val" class="muted">18%</span>
-                </div>
-              </label>
-              <button class="btn primary" type="submit">save</button>
-            </form>
-          </div>
+          
         </div>
+
+        
       </main>
 
       <footer class="footer"><a href="https://github.com/abra5umente" target="_blank" rel="noopener noreferrer">github</a> • <a href="https://x.com/alexisnotfunny" target="_blank" rel="noopener noreferrer">x</a></footer>
     </div>
+
+    <!-- Left-side collapsible controls drawer (collapsed by default) -->
+    <aside id="controls-drawer" class="controls-drawer">
+      <div class="drawer-header">
+        <h2 class="drawer-title">controls</h2>
+        <button id="controls-close" class="btn drawer-close" aria-label="close controls">✕</button>
+      </div>
+      <div class="controls">
+        <button id="open-settings" class="btn">settings <span class="arrow" aria-hidden="true">▸</span></button>
+        <div id="settings-panel" class="drawer-section drawer-collapsible">
+          <div class="settings">
+            <h2>settings</h2>
+            <form id="settings-form">
+            <label>
+              session (min)
+              <input type="number" step="0.5" min="1" id="session" />
+            </label>
+            <label>
+              short break (min)
+              <input type="number" step="0.5" min="1" id="short" />
+            </label>
+            <label>
+              long break (min)
+              <input type="number" step="0.5" min="1" id="long" />
+            </label>
+            <label>
+              threshold
+              <input type="number" step="1" min="1" id="threshold" />
+            </label>
+            <label>
+              theme
+              <select id="theme">
+                <option value="cyan">cyan</option>
+                <option value="violet">violet</option>
+                <option value="amber">amber</option>
+                <option value="green">green</option>
+                <option value="red">red</option>
+                <option value="blue">blue</option>
+              </select>
+            </label>
+            <label>
+              scanlines
+              <div style="display:flex; gap:10px; align-items:center;">
+                <input type="checkbox" id="scanlines-enabled" checked />
+                <span class="muted">enable</span>
+              </div>
+            </label>
+            <label>
+              scanlines opacity
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input type="range" id="scanlines" min="0" max="1" step="0.01" />
+                <span id="scanlines-val" class="muted">18%</span>
+              </div>
+            </label>
+            <button class="btn primary" type="submit">save</button>
+          </form>
+        </div>
+        </div>
+        <button id="open-notes" class="btn">notes <span class="arrow" aria-hidden="true">+</span></button>
+        <button id="open-stats" class="btn">statistics <span class="arrow" aria-hidden="true">+</span></button>
+        <div id="stats-panel" class="drawer-section drawer-collapsible">
+          <div class="settings">
+            <h2>statistics</h2>
+            <div class="stats-grid">
+              <div class="stat">
+                <div class="stat-label">total work</div>
+                <div id="stat-work" class="stat-value">00:00</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">total break</div>
+                <div id="stat-break" class="stat-value">00:00</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">sessions</div>
+                <div id="stat-sessions" class="stat-value">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Toggle tab to open the drawer -->
+    <button id="controls-toggle" class="btn controls-toggle" aria-label="open controls" aria-expanded="false">controls ▸</button>
 
     <!-- External libs for Markdown rendering -->
     <!-- Note: integrity attributes removed to avoid SRI mismatch errors -->
