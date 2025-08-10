@@ -135,6 +135,7 @@ body {
   position: fixed; inset: 0; z-index: 40; pointer-events: none;
 }
 
+.clock-card { padding: 18px 24px; display: grid; gap: 6px; justify-items: center; width: 100%; max-width: 720px; }
 .timer-card { padding: 24px; display: grid; gap: 16px; align-content: start; width: 100%; max-width: 720px; }
 .notes { padding: 18px; display: grid; gap: 10px; width: 100%; max-width: 980px; }
 .notes-collapsible { display: none; }
@@ -182,15 +183,10 @@ body {
   font-family: inherit;
   box-shadow: 0 0 8px var(--line-strong) inset;
 }
-.badge.pulse { animation: pulseGlow 1.6s ease-in-out infinite; }
-.badge.pulse-fast { animation: pulseGlow 0.8s ease-in-out infinite; }
-@keyframes pulseGlow {
-  0%, 100% {
-    filter: drop-shadow(0 0 0 var(--primary));
-  }
-  50% {
-    filter: drop-shadow(0 0 6px var(--primary)) drop-shadow(0 0 14px var(--primary));
-  }
+.badge.pulse, .badge.pulse-fast { transition: filter .22s ease; }
+/* beat-driven pulse: stronger glow only while .page.beat is present */
+.page.beat .badge.pulse, .page.beat .badge.pulse-fast {
+  filter: drop-shadow(0 0 6px var(--primary)) drop-shadow(0 0 14px var(--primary));
 }
 .muted { color: var(--muted); }
 .clock {
@@ -202,8 +198,7 @@ body {
   /* prevent inherited animation from adding drop-shadows directly on text */
   filter: none !important;
 }
-.clock.pulse { animation: pulseGlow 1.6s ease-in-out infinite; }
-.clock.pulse-fast { animation: pulseGlow 0.8s ease-in-out infinite; }
+.clock.pulse, .clock.pulse-fast { /* beat-driven via ::before; no CSS animation */ }
 .clock.dim { opacity: 0.55; }
 .clock::before {
   /* back-glow layer: sits behind the numerals */
@@ -213,12 +208,17 @@ body {
   filter: blur(22px);
   opacity: 0.45;
   z-index: -1;
+  transition: opacity .22s ease, filter .22s ease;
 }
-.clock.pulse::before { animation: backGlow 1.6s ease-in-out infinite; }
-.clock.pulse-fast::before { animation: backGlow 0.8s ease-in-out infinite; }
-@keyframes backGlow {
-  0%, 100% { opacity: 0.35; filter: blur(18px); }
-  50% { opacity: 0.75; filter: blur(28px); }
+/* heightened glow only during the global beat tick */
+.page.beat .clock.pulse::before,
+.page.beat .clock.pulse-fast::before {
+  opacity: 0.85;
+  filter: blur(26px);
+}
+.clock.overtime {
+  color: var(--accent);
+  text-shadow: 0 0 3px var(--line-strong), 0 0 10px var(--accent);
 }
 .clock::after {
   /* text-masked scanlines overlay: applies only to numerals */
@@ -245,6 +245,27 @@ body {
   animation: scan 7s linear infinite;
 }
 .message { text-align: center; min-height: 20px; color: var(--primary); }
+
+/* subtle overtime badge */
+.overtime-pill {
+  display: none;
+  align-self: center;
+  margin: -6px auto 2px;
+  padding: 3px 10px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent) inset;
+  animation: otPulse 2.2s ease-in-out infinite;
+}
+.overtime-pill.show { display: inline-block; }
+@keyframes otPulse {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
+}
 
 .controls { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
 @media (max-width: 600px) { .controls { grid-template-columns: repeat(2, 1fr); } }

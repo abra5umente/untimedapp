@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>timerless.app</title>
+    <title>untimed.app</title>
     <link rel="stylesheet" href="/static/app.css" />
   </head>
   <body>
@@ -11,17 +11,22 @@
     <canvas id="fx-confetti" class="fx-canvas"></canvas>
     <div class="page">
       <header class="header">
-        <h1 class="deck-title">timerless.app<span class="cursor">_</span></h1>
+        <h1 class="deck-title">untimed.app<span class="cursor">_</span></h1>
         <p class="tag">it's thinkin' time</p>
       </header>
 
       <main class="container">
+        <!-- Dedicated clock window above controls -->
+        <section class="clock-card glass">
+          <div id="clock" class="clock" data-text="25:00">25:00</div>
+          <div id="overtime-pill" class="overtime-pill" aria-live="polite" aria-atomic="true">overtime</div>
+        </section>
+
         <section class="timer-card glass">
           <div class="status-row">
             <span id="phase" class="badge">idle</span>
             <span id="count" class="muted">sessions: 0</span>
           </div>
-          <div id="clock" class="clock" data-text="25:00">25:00</div>
           <div id="message" class="message"></div>
           <div class="controls">
             <button id="start" class="btn primary">start work</button>
@@ -117,6 +122,6 @@
     <!-- Note: integrity attributes removed to avoid SRI mismatch errors -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
-    <script src="/static/app.js"></script>
+    <script type="module" src="/static/app.js"></script>
   </body>
   </html>

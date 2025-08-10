@@ -1,3 +1,5 @@
+import { ClockWidget } from './widgets/ClockWidget.js';
+
 (() => {
   const $ = (sel) => document.querySelector(sel);
 
@@ -147,15 +149,16 @@
     localStorage.removeItem(cyclesKey());
   }
 
+  // instantiate clock widget
+  const clockWidget = new ClockWidget({ root: els.clock, pill: document.getElementById('overtime-pill') });
+
   function applyState(s) {
     const prev = lastState;
     trackPhaseTransitions(prev, s);
     lastState = s;
     els.count.textContent = `sessions: ${s.pomodoros_completed ?? 0}`;
-    const formatted = s.formatted || "00:00";
-    els.clock.textContent = formatted;
-    // keep text-masked scanlines overlay in sync
-    els.clock.setAttribute("data-text", formatted);
+    // delegate clock updates
+    clockWidget.update(s);
 
     if (s.last_event && s.last_event.name) {
       const name = s.last_event.name;
@@ -225,25 +228,10 @@
     }
 
     // Main timer pulse: normal when running, double-rate when paused (work)
-    const sec = typeof s.seconds_remaining === "number" ? s.seconds_remaining : null;
-    const workRunning = running && phase === "work";
-    const workPaused = !running && phase === "work" && sec !== null && sec > 0;
-    const isBreak = phase === "break";
-    if (els.clock) {
-      // pulse behavior
-      els.clock.classList.toggle("pulse", workRunning && !workPaused);
-      els.clock.classList.toggle("pulse-fast", !!workPaused);
-      // dim during break (running or paused)
-      els.clock.classList.toggle("dim", !!isBreak);
-      // ensure classes are cleared when neither applies
-      if (!workRunning && !workPaused) {
-        els.clock.classList.remove("pulse");
-        els.clock.classList.remove("pulse-fast");
-      }
-      if (!isBreak) {
-        els.clock.classList.remove("dim");
-      }
-    }
+    // clock-specific class toggles handled in widget
+
+    // synchronize beat driver with current state
+    updateBeatDriver(s);
   }
 
   function trackPhaseTransitions(prev, s) {
@@ -613,6 +601,48 @@
   }
 
   // --- subtle falling glyphs background ---
+  // --- Global beat driver: synchronizes pulse across UI ---
+  let beatTimer = null;
+  let beatIntervalMs = null;
+  function setBeatInterval(ms) {
+    if (beatIntervalMs === ms) return;
+    beatIntervalMs = ms;
+    if (beatTimer) {
+      clearInterval(beatTimer);
+      beatTimer = null;
+    }
+    // ensure beat class removed when stopping
+    if (ms == null) {
+      const pageEl = els.page || document.querySelector('.page');
+      if (pageEl) pageEl.classList.remove('beat');
+      return;
+    }
+    const doBeat = () => {
+      const pageEl = els.page || document.querySelector('.page');
+      if (!pageEl) return;
+      pageEl.classList.add('beat');
+      // brief beat; then clear to allow next ramp via CSS transitions
+      setTimeout(() => pageEl.classList.remove('beat'), Math.min(240, Math.max(120, Math.floor(ms * 0.35))));
+    };
+    // fire one immediately to align with the just-updated second
+    doBeat();
+    beatTimer = setInterval(doBeat, ms);
+  }
+  function updateBeatDriver(s) {
+    const phase = s && s.phase;
+    const running = !!(s && s.running);
+    const sec = typeof s?.seconds_remaining === 'number' ? s.seconds_remaining : null;
+    const workRunning = running && phase === 'work';
+    const workPaused = !running && phase === 'work';
+    if (workRunning) {
+      setBeatInterval(1000); // 1Hz while running
+    } else if (workPaused) {
+      setBeatInterval(500); // 2Hz when paused in work
+    } else {
+      setBeatInterval(null); // no beat (e.g., breaks, idle)
+    }
+  }
+
   function initRain() {
     const canvas = document.getElementById("bg-rain");
     if (!canvas) return;
