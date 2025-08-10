@@ -22,6 +22,11 @@
     long: $("#long"),
     threshold: $("#threshold"),
     theme: $("#theme"),
+    page: document.querySelector('.page'),
+    // ui prefs
+    scanlines: $("#scanlines"),
+    scanVal: $("#scanlines-val"),
+    scanEnabled: $("#scanlines-enabled"),
     // notes
     notes: $("#notes"),
     preview: $("#notes-preview"),
@@ -167,6 +172,10 @@
           break;
         case "work_zero":
           setMessage("work hit 00:00. you can take a break.");
+          // Trigger confetti once when hitting 00:00 during work mode
+          if (!prev || !(prev.last_event && prev.last_event.name === "work_zero")) {
+            try { triggerConfettiBurst(); } catch {}
+          }
           break;
         case "work_completed":
           setMessage(`work completed. overtime: ${formatOvertime(data.overtime_seconds)}`);
@@ -337,6 +346,9 @@
       const t = getTheme();
       els.theme.value = t;
     }
+    // apply scanlines prefs from localStorage
+    applyScanOpacity(getScanOpacity());
+    applyScanEnabled(getScanEnabled());
   }
 
   // Wire controls
@@ -437,8 +449,39 @@
       .trim() || "#00e5ff";
   }
 
-  // apply saved theme immediately
+  // scanlines intensity helpers
+  function getScanOpacity() {
+    const v = localStorage.getItem("scanlines_opacity");
+    const n = parseFloat(v);
+    if (!Number.isFinite(n)) return 0.18;
+    return Math.min(1, Math.max(0, n));
+  }
+  function applyScanOpacity(val) {
+    const clamped = Math.min(1, Math.max(0, Number(val) || 0));
+    document.documentElement.style.setProperty("--scanlines-opacity", String(clamped));
+    localStorage.setItem("scanlines_opacity", String(clamped));
+    if (els.scanlines) els.scanlines.value = String(clamped);
+    if (els.scanVal) els.scanVal.textContent = `${Math.round(clamped * 100)}%`;
+  }
+
+  function getScanEnabled() {
+    const v = localStorage.getItem("scanlines_enabled");
+    if (v === null) return true;
+    return v === 'true';
+  }
+  function applyScanEnabled(enabled) {
+    const on = !!enabled;
+    localStorage.setItem("scanlines_enabled", String(on));
+    const pageEl = els.page || document.querySelector('.page');
+    if (pageEl) pageEl.classList.toggle('no-scanlines', !on);
+    if (els.scanlines) els.scanlines.disabled = !on;
+    if (els.scanEnabled) els.scanEnabled.checked = on;
+  }
+
+  // apply saved theme and scanlines immediately
   applyTheme(getTheme());
+  applyScanOpacity(getScanOpacity());
+  applyScanEnabled(getScanEnabled());
 
   loadConfig();
   refresh();
@@ -557,6 +600,17 @@
       applyTheme(els.theme.value);
     });
   }
+  if (els.scanlines) {
+    // live update while sliding
+    els.scanlines.addEventListener("input", () => {
+      applyScanOpacity(els.scanlines.value);
+    });
+  }
+  if (els.scanEnabled) {
+    els.scanEnabled.addEventListener('change', () => {
+      applyScanEnabled(els.scanEnabled.checked);
+    });
+  }
 
   // --- subtle falling glyphs background ---
   function initRain() {
@@ -567,9 +621,12 @@
     let h = (canvas.height = window.innerHeight);
 
     const glyphs = "0123456789abcdef".split("");
+    // Accented glyphs come from this phrase (spaces removed)
+    const phraseGlyphs = "time is running out!".replace(/\s+/g, "").split("");
     const fontSize = 14; // character size
     let columns = Math.floor(w / fontSize);
-    const drops = []; // active drops
+    const drops = []; // base/background drops
+    const accentDrops = []; // progress-linked accent drops
     const maxDrops = Math.max(8, Math.floor(columns * 0.05)); // sparse
 
     function resize() {
@@ -594,9 +651,33 @@
       });
     }
 
+    function spawnAccent(urgency) {
+      // urgency in [0,1]; cap number of accent drops dynamically
+      const maxAccent = Math.max(2, Math.floor(columns * (0.02 + 0.09 * urgency)));
+      if (accentDrops.length >= maxAccent) return;
+      const col = Math.floor(Math.random() * columns);
+      // allow multiple in same column, but avoid piling too many
+      if (accentDrops.filter((d) => d.col === col).length > 2) return;
+      const alpha = 0.35 + 0.45 * urgency; // brighter as time runs out
+      const speed = 80 + 120 * urgency + Math.random() * 80; // generally faster than base
+      const char = phraseGlyphs[(Math.random() * phraseGlyphs.length) | 0];
+      accentDrops.push({ col, y: Math.random() * -h, speed, color: glyphColor, alpha, char });
+    }
+
     // theme change handled globally; no-op here
 
     let last = performance.now();
+    function workUrgency() {
+      // derive urgency from lastState/lastConfig; only during work phase
+      const s = lastState || {};
+      const c = lastConfig || {};
+      if (s.phase !== "work") return 0;
+      const totalSec = Math.max(1, Math.floor((typeof c.pomodoro_minutes === "number" ? c.pomodoro_minutes : 25) * 60));
+      const remain = typeof s.seconds_remaining === "number" ? s.seconds_remaining : totalSec;
+      if (remain <= 0) return 1; // overtime or just hit zero => max urgency
+      const u = 1 - Math.min(1, Math.max(0, remain / totalSec));
+      return u;
+    }
     function tick(now) {
       const dt = Math.min(0.05, (now - last) / 1000); // seconds
       last = now;
@@ -616,9 +697,31 @@
         ctx.shadowBlur = 8;
         ctx.shadowColor = d.color;
         ctx.fillStyle = d.color;
+        ctx.globalAlpha = 1;
         ctx.fillText(ch, x, d.y);
         d.y += d.speed * dt;
         if (d.y > h + 40) drops.splice(i, 1);
+      }
+
+      // draw accent drops
+      const u = workUrgency();
+      if (u > 0) {
+        // chance to spawn is tied to urgency
+        if (Math.random() < 0.05 + 0.35 * u) spawnAccent(u);
+      }
+      // slightly larger, glowier accent letters
+      const accentFont = `${fontSize + 2}px Consolas, ui-monospace, monospace`;
+      for (let i = accentDrops.length - 1; i >= 0; i--) {
+        const d = accentDrops[i];
+        const x = d.col * fontSize + fontSize / 2;
+        ctx.font = accentFont;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = d.color;
+        ctx.fillStyle = d.color;
+        ctx.globalAlpha = Math.max(0.2, Math.min(1, d.alpha));
+        ctx.fillText(d.char, x, d.y);
+        d.y += d.speed * dt;
+        if (d.y > h + 60) accentDrops.splice(i, 1);
       }
 
       // occasional spawn
@@ -636,4 +739,133 @@
   }
 
   initRain();
+
+  // --- Confetti FX overlay ---
+  function initConfetti() {
+    const canvas = document.getElementById("fx-confetti");
+    if (!canvas) return { burst: () => {} };
+    const ctx = canvas.getContext("2d");
+    let w = (canvas.width = window.innerWidth);
+    let h = (canvas.height = window.innerHeight);
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+
+    const particles = [];
+    let running = false;
+    let last = performance.now();
+
+    function rand(min, max) { return min + Math.random() * (max - min); }
+    function hexToRgb(hex) {
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+      if (!m) return { r: 255, g: 255, b: 255 };
+      return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+    }
+    function rgbToStr(c, a=1) { return `rgba(${c.r|0}, ${c.g|0}, ${c.b|0}, ${a})`; }
+    function mix(a, b, t) { return { r: a.r+(b.r-a.r)*t, g: a.g+(b.g-a.g)*t, b: a.b+(b.b-a.b)*t }; }
+
+    function themePalette() {
+      // derive a palette from CSS variables
+      const styles = getComputedStyle(document.documentElement);
+      const primary = styles.getPropertyValue("--primary").trim() || "#00e5ff";
+      const accent = styles.getPropertyValue("--accent").trim() || "#00bcd4";
+      const p = hexToRgb(primary);
+      const a = hexToRgb(accent);
+      const light = mix(p, { r: 255, g: 255, b: 255 }, 0.35);
+      return [p, a, light];
+    }
+
+    function spawnBurst(x, y) {
+      const palette = themePalette();
+      const count = 140;
+      for (let i = 0; i < count; i++) {
+        const c = palette[(Math.random() * palette.length) | 0];
+        const speed = rand(220, 760);
+        const ang = rand(-Math.PI, Math.PI);
+        particles.push({
+          x, y,
+          vx: Math.cos(ang) * speed,
+          vy: Math.sin(ang) * speed - rand(100, 260),
+          size: rand(3, 8),
+          rot: rand(0, Math.PI * 2),
+          vr: rand(-6, 6),
+          color: c,
+          life: 0,
+          ttl: rand(1.2, 2.0),
+          shape: Math.random() < 0.5 ? "rect" : "tri",
+        });
+      }
+      if (!running) {
+        running = true;
+        last = performance.now();
+        requestAnimationFrame(tick);
+      }
+    }
+
+    function tick(now) {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      ctx.clearRect(0, 0, w, h);
+      const g = 1200; // gravity px/s^2
+      const drag = 0.995;
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life += dt;
+        if (p.life > p.ttl) { particles.splice(i, 1); continue; }
+        // integrate
+        p.vy += g * dt;
+        p.vx *= drag; p.vy *= drag;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.rot += p.vr * dt;
+
+        // boundaries fade
+        const alpha = Math.max(0, 1 - p.life / p.ttl);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = rgbToStr(p.color, alpha);
+        if (p.shape === "rect") {
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.66);
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(0, -p.size * 0.7);
+          ctx.lineTo(p.size * 0.6, p.size * 0.6);
+          ctx.lineTo(-p.size * 0.6, p.size * 0.6);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      if (particles.length > 0) {
+        requestAnimationFrame(tick);
+      } else {
+        running = false;
+        // leave canvas cleared
+      }
+    }
+
+    function burstAtClock() {
+      const clock = document.getElementById("clock");
+      if (clock) {
+        const r = clock.getBoundingClientRect();
+        const x = r.left + r.width / 2;
+        const y = r.top + r.height / 2;
+        spawnBurst(x, y);
+      } else {
+        spawnBurst(window.innerWidth / 2, window.innerHeight / 2);
+      }
+    }
+
+    return { burstAtClock };
+  }
+
+  const confetti = initConfetti();
+  function triggerConfettiBurst() {
+    if (confetti && typeof confetti.burstAtClock === 'function') confetti.burstAtClock();
+  }
 })();

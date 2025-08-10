@@ -10,6 +10,7 @@
   --danger: #ff3864;    /* neon red */
   --panel: rgba(0, 10, 20, 0.55);
   --glow: 0 0 10px rgba(0, 229, 255, 0.35), 0 0 22px rgba(255, 43, 214, 0.15);
+  --scanlines-opacity: 0.18; /* default intensity; overridable by UI */
 }
 
 /* Theme variants override only the key accent variables.
@@ -68,10 +69,8 @@ body {
   margin: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Cascadia Code", "Fira Code", monospace;
   color: var(--fg);
-  /* Solid dark blue base to avoid hue flicker */
-  background:
-    repeating-linear-gradient(0deg, var(--line) 0, var(--line) 1px, transparent 2px, transparent 4px),
-    var(--bg);
+  /* Solid dark blue base; scanlines handled via overlay layer */
+  background: var(--bg);
   position: relative;
 }
 
@@ -116,14 +115,24 @@ body {
     rgba(0,0,0,0) 4px
   );
   mix-blend-mode: overlay;
-  opacity: 0.18;
+  opacity: var(--scanlines-opacity);
   animation: scan 6s linear infinite;
+}
+/* allow fully disabling scanlines via class */
+.page.no-scanlines::after {
+  opacity: 0 !important;
+  animation: none !important;
 }
 @keyframes scan { to { background-position: 0 4px; } }
 
 /* background canvas for falling glyphs */
 .bg-canvas {
   position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.16;
+}
+
+/* FX overlay canvas for transient effects (e.g., confetti) */
+.fx-canvas {
+  position: fixed; inset: 0; z-index: 40; pointer-events: none;
 }
 
 .timer-card { padding: 24px; display: grid; gap: 16px; align-content: start; width: 100%; max-width: 720px; }
@@ -290,6 +299,75 @@ body {
   font-family: inherit;
 }
 .settings select:focus { border-color: var(--line-strong); box-shadow: 0 0 8px var(--line-strong); }
+
+/* Themed controls: range + checkbox */
+.settings input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 2px;
+  outline: none;
+  border: 1px solid var(--line);
+}
+.settings input[type="range"]:focus { border-color: var(--line-strong); box-shadow: 0 0 8px var(--line-strong); }
+.settings input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--primary);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 0 6px var(--line-strong);
+  cursor: pointer;
+}
+.settings input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--primary);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 0 6px var(--line-strong);
+  cursor: pointer;
+}
+.settings input[type="range"]::-moz-range-track {
+  height: 4px; background: color-mix(in srgb, var(--line) 70%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+.settings input[type="range"]:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+.settings input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; height: 18px;
+  display: inline-block;
+  position: relative;
+  vertical-align: middle;
+  border: 1px solid var(--line);
+  background: #071224;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: box-shadow .15s ease, border-color .15s ease, background .2s ease;
+}
+.settings input[type="checkbox"]:hover { border-color: var(--line-strong); box-shadow: 0 0 8px var(--line-strong); }
+.settings input[type="checkbox"]:focus { outline: none; border-color: var(--line-strong); box-shadow: 0 0 8px var(--line-strong); }
+.settings input[type="checkbox"]:checked {
+  background: var(--primary);
+  border-color: var(--line-strong);
+  box-shadow: 0 0 6px var(--line-strong) inset;
+}
+.settings input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 8px; height: 12px;
+  border: 2px solid #001018;
+  border-top: 0; border-left: 0;
+  transform: translate(-50%, -58%) rotate(45deg);
+  opacity: 0;
+  pointer-events: none;
+}
+.settings input[type="checkbox"]:checked::after { opacity: 1; }
+.settings input[type="checkbox"]:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
 
 /* modal bottom sheet */
 .modal {

@@ -18,11 +18,15 @@
 
 ## Frontend Features (Web)
 - Stable dark‑blue background; accent color is theme‑driven.
-- Theme selector (Settings): cyan, violet, amber, green. Persists via `localStorage`.
+- Theme selector (Settings): cyan, violet, amber, green, red, blue. Persists via `localStorage`.
 - Work badge pulses while running; shows “paused” and pulses rapidly when paused.
 - Main timer pulses while running; pulses rapidly when paused; dims during breaks.
 - Break start messages are explicit: “short break started.” / “long break started.”
 - Collapsible notes panel under the timer with two‑column layout (Markdown editor + live preview), auto‑save, Save/Clear/Export, and a "clear local data" button.
+- Subtle falling glyphs background (Matrix‑style) that follows the theme accent.
+- Progress‑linked accent glyphs: as work approaches 00:00, more letters from “time is running out!” fall.
+- Scanlines overlay with Settings controls: on/off toggle and opacity slider (0–1).
+- Confetti celebration: when work hits 00:00, the timer bursts into theme‑colored confetti with physics.
 
 ## Coding Style & Naming
 - Follow PEP 8; 4‑space indentation.
@@ -38,6 +42,9 @@
   - Work badge/timer pulse states (running vs paused) and dim during breaks.
   - Messages on break start show correct short/long text.
   - Notes auto‑save, Save/Clear work; Markdown export downloads a `.md` file.
+  - Scanlines: opacity slider affects overlay; toggle fully disables scanlines (no background scanlines remain).
+  - Progress glyphs: accent letters increase as time counts down during work phase.
+  - Confetti: when work reaches 00:00, a one‑shot themed confetti burst appears centered on the timer.
 - If adding tests, use `pytest` for pure helpers (e.g., `format_time`, settings load/save). Place under `pymodoro/tests/` as `test_*.py`.
 
 ## Commit & Pull Requests

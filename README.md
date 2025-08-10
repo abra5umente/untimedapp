@@ -11,7 +11,11 @@ Highlights
 - Collapsible notes panel under the timer (▸ closed, ▾ open)
 - Markdown notes with live preview (marked + DOMPurify)
 - Export to Markdown including per‑session configured vs actual durations and overall totals
-- Themeable accent (cyan, violet, amber, green) on a stable dark‑blue background
+- Themeable accent (cyan, violet, amber, green, red, blue) on a stable dark‑blue background
+- Subtle falling glyphs background that follows the current theme
+- Progress‑linked accent glyphs: more letters from “time is running out!” fall as 00:00 approaches (work)
+- Confetti celebration at work 00:00 using theme colors and simple physics
+- Scanlines overlay controls: on/off toggle and opacity slider (0–1)
 
 Web App (FastAPI)
 -----------------
@@ -25,6 +29,14 @@ UI Basics
 - `start work`, `take break`, `pause`/`resume`, `reset`, `clear`, `settings`
 - `notes ▸/▾` toggles a collapsible, two‑column notes panel (editor + live preview)
 - Notes auto‑save to `localStorage` per session; Save/Clear/Export buttons available; a "clear local data" button wipes all saved notes/cycles
+ - Settings: durations, threshold, theme, scanlines (enable + opacity)
+
+Visual FX & Background
+----------------------
+- Falling glyphs background (Matrix‑style) uses the theme accent color.
+- During work, accent letters from “time is running out!” increase as 00:00 nears.
+- When work reaches 00:00, the timer explodes into theme‑colored confetti.
+- Scanlines overlay can be disabled and its opacity adjusted in Settings.
 
 Export Contents
 ---------------
