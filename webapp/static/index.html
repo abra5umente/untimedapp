@@ -21,13 +21,15 @@
             <!-- Dedicated clock window above controls -->
             <section class="clock-card glass">
               <div id="clock" class="clock" data-text="25:00">25:00</div>
-              <div id="overtime-pill" class="overtime-pill" aria-live="polite" aria-atomic="true">overtime</div>
             </section>
 
             <section class="timer-card glass">
               <div class="status-row">
                 <span id="phase" class="badge">idle</span>
-                <span id="count" class="muted">sessions: 0</span>
+                <div class="status-right">
+                  <span id="count" class="muted">sessions: 0</span>
+                  <span id="overtime-pill" class="overtime-pill" aria-live="polite" aria-atomic="true">overtime</span>
+                </div>
               </div>
               <div id="message" class="message"></div>
               <div class="controls">
@@ -126,12 +128,19 @@
                 <span id="scanlines-val" class="muted">18%</span>
               </div>
             </label>
+            <label id="sound-enabled-row">
+              sound
+              <div style="display:flex; gap:10px; align-items:center;">
+                <input type="checkbox" id="sound-enabled" checked />
+                <span class="muted">enable</span>
+              </div>
+            </label>
             <button class="btn primary" type="submit">save</button>
           </form>
         </div>
         </div>
         <button id="open-notes" class="btn">notes <span class="arrow" aria-hidden="true">+</span></button>
-        <button id="open-stats" class="btn">statistics <span class="arrow" aria-hidden="true">+</span></button>
+        <button id="open-stats" class="btn">statistics <span class="arrow" aria-hidden="true">▸</span></button>
         <div id="stats-panel" class="drawer-section drawer-collapsible">
           <div class="settings">
             <h2>statistics</h2>

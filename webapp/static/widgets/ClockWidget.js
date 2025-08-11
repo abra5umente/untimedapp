@@ -7,6 +7,7 @@ export class ClockWidget {
     this._minPx = 80;
     this._maxPx = 360;
     this._raf = null;
+    this._measure = null;
 
     // Bind once
     this.fit_to_container = this.fit_to_container.bind(this);
@@ -22,6 +23,21 @@ export class ClockWidget {
       // Fallback: on window resize
       window.addEventListener('resize', this.request_fit);
     }
+    // Create hidden measure node to avoid content-driven reflow
+    if (this.container && this.root) {
+      this._measure = document.createElement('div');
+      this._measure.setAttribute('aria-hidden', 'true');
+      this._measure.className = this.root.className || '';
+      this._measure.style.position = 'absolute';
+      this._measure.style.visibility = 'hidden';
+      this._measure.style.pointerEvents = 'none';
+      this._measure.style.whiteSpace = 'nowrap';
+      this._measure.style.left = '-9999px';
+      this._measure.style.top = '-9999px';
+      this._measure.textContent = '88:88'; // widest digits baseline
+      this.container.appendChild(this._measure);
+    }
+
     // Initial fit
     this.request_fit();
   }
@@ -39,7 +55,6 @@ export class ClockWidget {
     const formatted = s.formatted || '00:00';
     this.set_text(formatted);
     // Re-fit on content change
-    this.request_fit();
 
     const phase = s.phase;
     const running = !!s.running;
@@ -68,6 +83,17 @@ export class ClockWidget {
     const isOvertime = (phase === 'work' || phase === 'break') && typeof sec === 'number' && sec < 0;
     this.root.classList.toggle('overtime', !!isOvertime);
     if (this.pill) this.pill.classList.toggle('show', !!isOvertime);
+
+    // Ensure measurement accounts for worst-case width based on format
+    if (this._measure) {
+      const hasHours = (formatted.match(/:/g) || []).length >= 2;
+      const base = hasHours ? '88:88:88' : '88:88';
+      // Use ASCII hyphen-minus to match actual formatted string when negative
+      this._measure.textContent = isOvertime ? `-${base}` : base;
+    }
+
+    // Re-fit after updating measurement baseline
+    this.request_fit();
   }
 
   request_fit() {
@@ -90,11 +116,20 @@ export class ClockWidget {
     } catch {}
     const target = Math.max(0, cw - pad - 12); // small margin
 
-    // Measure at baseline
-    const prev = this.root.style.fontSize;
-    this.root.style.fontSize = `${this._basePx}px`;
-    const rect = this.root.getBoundingClientRect();
-    const measured = rect.width || 1;
+    // Measure using hidden baseline node to avoid UI flicker
+    let measured = 0;
+    if (this._measure) {
+      this._measure.style.fontSize = `${this._basePx}px`;
+      const r = this._measure.getBoundingClientRect();
+      measured = r.width || 1;
+    } else {
+      // fallback: measure on root (may cause slight flicker on first fit)
+      const prev = this.root.style.fontSize;
+      this.root.style.fontSize = `${this._basePx}px`;
+      const rect = this.root.getBoundingClientRect();
+      measured = rect.width || 1;
+      this.root.style.fontSize = prev;
+    }
 
     // Compute scale to fit and clamp
     const scale = target / measured;

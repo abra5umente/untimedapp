@@ -22,11 +22,19 @@
 - Work badge pulses while running; shows “paused” and pulses rapidly when paused.
 - Main timer pulses while running; pulses rapidly when paused; dims during breaks.
 - Break start messages are explicit: “short break started.” / “long break started.”
-- Collapsible notes panel under the timer with two‑column layout (Markdown editor + live preview), auto‑save, Save/Clear/Export, and a "clear local data" button.
+- Collapsible notes panel next to the timer with two‑column layout (Markdown editor + live preview), auto‑save, Save/Clear/Export, and a "clear local data" button.
 - Subtle falling glyphs background (Matrix‑style) that follows the theme accent.
 - Progress‑linked accent glyphs: as work approaches 00:00, more letters from “time is running out!” fall.
 - Scanlines overlay with Settings controls: on/off toggle and opacity slider (0–1).
 - Confetti celebration: when work hits 00:00, the timer bursts into theme‑colored confetti with physics.
+- Drawer toggles: Settings and Statistics use arrows `▸` (collapsed) and `▾` (expanded). Notes uses `+`/`−` and opens adjacent to the timer.
+- Drawer spacing: the gaps between Settings, Notes, and Statistics toggles are consistent.
+- Themed scrollbars across app surfaces.
+- Theme changes apply instantly (no refresh), including the falling glyphs.
+- Settings and Statistics dropdowns animate like the Notes rollout.
+- Clicking outside the open drawer closes it.
+- Overtime indicator shows in the controls status row (no clock layout shift); clock size stays stable at and after 00:00.
+- Beep notifications: work_zero and break_zero; sound toggle in Settings, highlighted when muted.
 
 ## Coding Style & Naming
 - Follow PEP 8; 4‑space indentation.
@@ -45,6 +53,12 @@
   - Scanlines: opacity slider affects overlay; toggle fully disables scanlines (no background scanlines remain).
   - Progress glyphs: accent letters increase as time counts down during work phase.
   - Confetti: when work reaches 00:00, a one‑shot themed confetti burst appears centered on the timer.
+  - Drawer arrows: Settings/Statistics show `▸/▾`; Notes shows `+/−`. Spacing between toggles is uniform.
+  - Drawer closes on outside click.
+  - Theme changes update immediately without refresh (including glyph color).
+  - Settings/Statistics dropdowns animate smoothly; no extra gaps remain when collapsed.
+  - Overtime: clock text does not resize at 00:00; “overtime” badge appears in the status row without shifting layout.
+  - Sounds: a short beep at work 00:00 and break 00:00; no beep on `break_ended`. Muting in Settings prevents beeps and highlights the setting row.
 - If adding tests, use `pytest` for pure helpers (e.g., `format_time`, settings load/save). Place under `pymodoro/tests/` as `test_*.py`.
 
 ## Commit & Pull Requests

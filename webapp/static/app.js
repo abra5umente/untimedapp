@@ -64,6 +64,55 @@ import { ClockWidget } from './widgets/ClockWidget.js';
     els.msg.textContent = text || "";
   }
 
+  // --- Minimal beep notifications (Web Audio) ---
+  function ensureAudio() {
+    try {
+      if (!window.__appAudioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        window.__appAudioCtx = new Ctx();
+      }
+      return window.__appAudioCtx;
+    } catch {
+      return null;
+    }
+  }
+  function soundEnabled() {
+    const v = localStorage.getItem('sound_enabled');
+    if (v === null) return true; // default on
+    return v === 'true';
+  }
+  function setSoundEnabled(on) {
+    localStorage.setItem('sound_enabled', String(!!on));
+    updateSoundUI();
+  }
+  function updateSoundUI() {
+    const row = document.querySelector('#sound-enabled-row');
+    const cb = document.querySelector('#sound-enabled');
+    const on = soundEnabled();
+    if (cb) cb.checked = on;
+    if (row) row.classList.toggle('danger', !on);
+  }
+
+  function playBeep(kind = 'default') {
+    if (!soundEnabled()) return;
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    try { if (ctx.state === 'suspended') ctx.resume(); } catch {}
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
+    const freq = kind === 'break' ? 660 : 880; // subtle distinction, still simple
+    osc.frequency.setValueAtTime(freq, now);
+    osc.type = 'square';
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.23);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.25);
+  }
+
   // ----- Session + Notes helpers -----
   function getSessionId() {
     let sid = localStorage.getItem("session_id");
@@ -189,6 +238,13 @@ import { ClockWidget } from './widgets/ClockWidget.js';
           // Trigger confetti once when hitting 00:00 during work mode
           if (!prev || !(prev.last_event && prev.last_event.name === "work_zero")) {
             try { triggerConfettiBurst(); } catch {}
+            try { playBeep('work'); } catch {}
+          }
+          break;
+        case "break_zero":
+          setMessage("break hit 00:00. you can resume work.");
+          if (!prev || !(prev.last_event && prev.last_event.name === "break_zero")) {
+            try { playBeep('break'); } catch {}
           }
           break;
         case "work_completed":
@@ -353,6 +409,7 @@ import { ClockWidget } from './widgets/ClockWidget.js';
     // apply scanlines prefs from localStorage
     applyScanOpacity(getScanOpacity());
     applyScanEnabled(getScanEnabled());
+    updateSoundUI();
   }
 
   // Wire controls
@@ -388,6 +445,15 @@ import { ClockWidget } from './widgets/ClockWidget.js';
     clearNotes();
   });
 
+  const soundCb = document.querySelector('#sound-enabled');
+  if (soundCb) {
+    soundCb.addEventListener('change', () => {
+      setSoundEnabled(!!soundCb.checked);
+      setMessage(soundEnabled() ? 'sound on.' : 'muted.');
+    });
+    updateSoundUI();
+  }
+
   els.form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const body = {
@@ -418,7 +484,7 @@ import { ClockWidget } from './widgets/ClockWidget.js';
       ensureDrawerOpen();
       const wasOpen = els.settingsPanel && els.settingsPanel.classList.contains('open');
       const willOpen = !wasOpen;
-      if (els.settingsPanel) els.settingsPanel.classList.toggle('open', willOpen);
+      if (els.settingsPanel) animateDrawerSection(els.settingsPanel, willOpen);
       // arrow: right when collapsed, down when expanded
       const arrow = els.btnOpenSettings.querySelector('.arrow');
       if (arrow) arrow.textContent = willOpen ? '▾' : '▸';
@@ -453,17 +519,62 @@ import { ClockWidget } from './widgets/ClockWidget.js';
     els.statsPanel.classList.remove('open');
     els.btnOpenStats.classList.remove('open');
     const setStatsOpen = async (open) => {
-      els.statsPanel.classList.toggle('open', !!open);
+      animateDrawerSection(els.statsPanel, !!open);
       els.btnOpenStats.classList.toggle('open', !!open);
       if (els.mainGrid) els.mainGrid.classList.toggle('stats-open', !!open);
       const arrow = els.btnOpenStats.querySelector('.arrow');
-      if (arrow) arrow.textContent = open ? '-' : '+';
-      if (open) { updateStatsUI(); scheduleSyncHeights(); } else if (els.statsPanel) { els.statsPanel.style.removeProperty('height'); }
+      if (arrow) arrow.textContent = open ? '▾' : '▸';
+      if (open) { updateStatsUI(); scheduleSyncHeights(); }
     };
     els.btnOpenStats.addEventListener('click', async () => {
       ensureDrawerOpen();
       await setStatsOpen(!els.statsPanel.classList.contains('open'));
     });
+  }
+
+  // Smooth height rollout for drawer sections (settings/statistics)
+  function animateDrawerSection(sectionEl, open) {
+    if (!sectionEl) return;
+    const isOpen = sectionEl.classList.contains('open');
+    if (open === isOpen) return;
+
+    const setDisplay = (val) => { sectionEl.style.display = val; };
+
+    if (open) {
+      // prepare for open
+      setDisplay('block');
+      sectionEl.style.overflow = 'hidden';
+      sectionEl.style.height = '0px';
+      // force reflow
+      void sectionEl.getBoundingClientRect();
+      const target = sectionEl.scrollHeight;
+      sectionEl.classList.add('open');
+      sectionEl.style.height = `${target}px`;
+      const onEnd = (e) => {
+        if (e && e.propertyName !== 'height') return;
+        sectionEl.removeEventListener('transitionend', onEnd);
+        sectionEl.style.height = '';
+        sectionEl.style.overflow = '';
+      };
+      sectionEl.addEventListener('transitionend', onEnd);
+    } else {
+      // animate close
+      sectionEl.style.overflow = 'hidden';
+      const h = sectionEl.scrollHeight;
+      sectionEl.style.height = `${h}px`;
+      // force reflow
+      void sectionEl.getBoundingClientRect();
+      sectionEl.classList.remove('open');
+      sectionEl.style.height = '0px';
+      const onEnd = (e) => {
+        if (e && e.propertyName !== 'height') return;
+        sectionEl.removeEventListener('transitionend', onEnd);
+        setDisplay('none');
+        sectionEl.style.height = '';
+        sectionEl.style.overflow = '';
+      };
+      sectionEl.addEventListener('transitionend', onEnd);
+    }
   }
 
   function secondsToHHMM(sec) {
@@ -584,6 +695,17 @@ import { ClockWidget } from './widgets/ClockWidget.js';
     setOpen(false);
     toggle.addEventListener('click', () => setOpen(!drawer.classList.contains('open')));
     if (closeBtn) closeBtn.addEventListener('click', () => setOpen(false));
+
+    // Close on outside click/tap when open
+    const handleOutside = (ev) => {
+      if (!drawer.classList.contains('open')) return;
+      const t = ev.target;
+      if (drawer.contains(t)) return; // inside drawer
+      if (toggle && toggle.contains(t)) return; // the toggle itself
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside, { passive: true });
   })();
 
   // Kickoff
@@ -598,6 +720,8 @@ import { ClockWidget } from './widgets/ClockWidget.js';
     glyphColor = getComputedStyle(document.documentElement)
       .getPropertyValue("--primary")
       .trim() || "#00e5ff";
+    // notify any visuals that cache theme-derived colors
+    try { window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } })); } catch {}
   }
 
   // scanlines intensity helpers
@@ -633,6 +757,7 @@ import { ClockWidget } from './widgets/ClockWidget.js';
   applyTheme(getTheme());
   applyScanOpacity(getScanOpacity());
   applyScanEnabled(getScanEnabled());
+  updateSoundUI();
 
   loadConfig();
   refresh();
@@ -859,7 +984,17 @@ import { ClockWidget } from './widgets/ClockWidget.js';
       accentDrops.push({ col, y: Math.random() * -h, speed, color: glyphColor, alpha, char });
     }
 
-    // theme change handled globally; no-op here
+    // react to theme changes: retint existing drops and clear trails
+    function handleThemeChange() {
+      const color = glyphColor;
+      for (const d of drops) d.color = color;
+      for (const d of accentDrops) d.color = color;
+      // hard clear to avoid old-color trails lingering
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "rgba(0,0,0,0.9)";
+      ctx.fillRect(0, 0, w, h);
+    }
+    window.addEventListener('themechange', handleThemeChange);
 
     let last = performance.now();
     function workUrgency() {

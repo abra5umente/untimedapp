@@ -11,6 +11,12 @@
   --panel: rgba(0, 10, 20, 0.55);
   --glow: 0 0 10px rgba(0, 229, 255, 0.35), 0 0 22px rgba(255, 43, 214, 0.15);
   --scanlines-opacity: 0.18; /* default intensity; overridable by UI */
+  /* Themed scrollbar tokens */
+  --sb-size: 11px;
+  --sb-track: color-mix(in srgb, var(--bg-2) 80%, transparent);
+  --sb-thumb: color-mix(in srgb, var(--primary) 35%, var(--bg-2));
+  --sb-thumb-hover: color-mix(in srgb, var(--primary) 65%, var(--bg-2));
+  --sb-thumb-active: var(--primary);
 }
 
 /* Theme variants override only the key accent variables.
@@ -73,6 +79,20 @@ body {
   background: var(--bg);
   position: relative;
 }
+
+/* Global themed scrollbars (WebKit/Blink + Firefox) */
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) transparent; }
+/* WebKit/Blink */
+*::-webkit-scrollbar { width: var(--sb-size); height: var(--sb-size); }
+*::-webkit-scrollbar-track { background: var(--sb-track); border: 1px solid var(--line); }
+*::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  border: 1px solid var(--line-strong);
+  border-radius: 0; /* squared to match UI */
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); }
+*::-webkit-scrollbar-thumb:active { background: var(--sb-thumb-active); }
 
 .page { height: 100vh; display: grid; grid-template-rows: auto 1fr auto; position: relative; z-index: 1; }
 
@@ -307,19 +327,21 @@ body {
 .message { text-align: center; min-height: 20px; color: var(--primary); }
 
 /* subtle overtime badge */
+.status-right { display: flex; align-items: center; gap: 10px; }
 .overtime-pill {
   display: none;
-  align-self: center;
-  margin: -6px auto 2px;
+  margin: 0;
   padding: 3px 10px;
   border: 1px solid var(--accent);
   color: var(--accent);
+  background: rgba(0, 0, 0, 0.25);
   font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: lowercase;
   box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent) inset;
   animation: otPulse 2.2s ease-in-out infinite;
+  pointer-events: none;
 }
 .overtime-pill.show { display: inline-block; }
 @keyframes otPulse {
@@ -362,12 +384,28 @@ body {
 .settings h2 { margin: 0 0 10px; font-size: 1.05rem; color: var(--primary); text-transform: none; letter-spacing: 0.06em; font-weight: 800; }
 .settings form { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
 .settings label { display: grid; gap: 6px; font-size: 0.9rem; color: var(--muted); }
+.settings label.danger {
+  border: 1px solid var(--accent);
+  padding: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, #0a0f1f);
+  box-shadow: 0 0 8px var(--accent) inset;
+}
 .settings input {
   width: 100%; padding: 10px 12px; border-radius: 0;
   border: 1px solid var(--line);
   background: #071224; color: var(--fg);
   outline: none;
   font-family: inherit;
+}
+.settings input[type="number"] {
+  /* remove native spinners for a cleaner, themed look */
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.settings input[type="number"]::-webkit-outer-spin-button,
+.settings input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .settings input:focus { border-color: var(--line-strong); box-shadow: 0 0 8px var(--line-strong); }
 .settings button { justify-self: start; margin-top: 8px; }
@@ -533,15 +571,17 @@ body {
 /* Drawer sections (collapsible) */
 .drawer-section { border-top: 1px solid var(--line); }
 .drawer-collapsible {
+  display: none; /* removed from layout while collapsed */
   overflow: hidden;
-  max-height: 0;
+  height: 0; /* animate height for smooth rollout */
   opacity: 0;
   transform: translateY(-8px);
-  transition: max-height .35s ease, opacity .25s ease, transform .35s ease;
+  transition: height .35s ease, opacity .25s ease, transform .35s ease;
   pointer-events: none;
 }
 .drawer-collapsible.open {
-  max-height: 1200px; /* ample room for form */
+  /* JS manages display:block and height during animation */
+  height: auto; /* ensure it stays open after we clear inline height */
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
