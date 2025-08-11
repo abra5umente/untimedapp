@@ -1,33 +1,40 @@
 untimed.app
 =============
+<img width="916" height="569" alt="image" src="https://github.com/user-attachments/assets/cbbf275b-631d-4392-8297-9501de023666" />  
 
-A simple, focused Pomodoro timer with a lightweight web app (FastAPI + single‑page UI). The core timer engine lives in a small Python package.
+ A pomodoro-esque timer with literally no bells, nor whistles.
+
+
+**What makes untimed different?**  
+---------------------------------
+Most timer apps I've tried share the same problem - they all do too much.
+They all sync with everything, have AI built-in, and demand more and more information from you.  
+untimed is different.  
+It won't ever ask you to sign in. It will never ask you to sync with Gmail. It won't even stop when it reaches 00:00.
+
+**So what does it actually do, then?**  
+- untimed will start running a timer when you click `start work`.
+- When the timer hits 00:00, you will hear a single, short beep, but the timer will keep running, counting down into negative time
+- When you are *actually* ready to take your break, you hit `take break`.
+- untimed will stop the work timer, save the actual length of your session, and then start the break timer
+- While you enjoy your break, the timer runs down to 00:00. A short beep will sound.
+- Not ready to face reality again yet? Just leave it. It will log the actual time for you.
+- When you're ready to come back, click `start work` again
 
 Highlights
 ----------
-- Work/break cycles with long‑break threshold
-- Continues past 00:00 for both work and break
-- Pause/Resume without resetting time
-- Collapsible notes panel next to the timer (side pane)
-- Markdown notes with live preview (marked + DOMPurify)
+- User-configurable work and break session durations
+- Collapsible notes panel with markdown notes & live preview
+- Statistics tracker (using local storage)
 - Export to Markdown including per‑session configured vs actual durations and overall totals
-- Themeable accent (cyan, violet, amber, green, red, blue) on a stable dark‑blue background
-- Subtle falling glyphs background that follows the current theme
-- Progress‑linked accent glyphs: more letters from “time is running out!” fall as 00:00 approaches (work)
-- Confetti celebration at work 00:00 using theme colors and simple physics
+- Themeable accents (cyan, violet, amber, green, red, blue)
 - Scanlines overlay controls: on/off toggle and opacity slider (0–1)
-- Themed scrollbars across app surfaces
-- Instant theme application (no refresh) including retinted background glyphs
-- Smooth animations: Settings/Statistics dropdowns match the Notes rollout
-- Overtime badge without layout shift and stable clock sizing at 00:00
 - Simple beep notifications at work/break 00:00; toggle in Settings (muted state highlighted)
- - Mobile‑ready UI: fluid layout under 768px, large touch targets, and a clock that dynamically fits its container.
- - Installable PWA with offline support via a service worker.
+- Mobile‑ready UI
+- Installable PWA with offline support
 
-**Screenshots**
+**Sounds cool, what does it look like?**
 ---------------
-Main timer:  
-<img width="916" height="569" alt="image" src="https://github.com/user-attachments/assets/cbbf275b-631d-4392-8297-9501de023666" />  
 Settings panel:  
 <img width="480" height="710" alt="image" src="https://github.com/user-attachments/assets/aaed971b-c406-4e1b-9754-09cde9875b45" />  
 Statistics panel:  
@@ -37,9 +44,14 @@ With notes pane:
 In break mode:  
 <img width="1454" height="592" alt="image" src="https://github.com/user-attachments/assets/03de47a5-786f-41a7-918a-7a531b6d59d5" />  
 
-**Demo**
+**Okay, so how does it actually work?**
 --------
 [![Watch on Youtube](https://img.youtube.com/vi/ivJMenq9UMk/maxresdefault.jpg)](https://youtu.be/ivJMenq9UMk)
+
+**Alright, now how do I actually use it?**
+------------------------------------------
+I've deployed this at https://untimed.midgard-realm.xyz - free for anyone to use. All I ask is that you give this repo a star if you found it handy.  
+Or, if you want to host it yourself:  
 
 Web App (FastAPI)
 -----------------
@@ -50,17 +62,11 @@ Web App (FastAPI)
 
 Docker
 ------
-- Build: `docker build -t webdoro .`
-- Run: `docker run --rm -p 8080:8080 webdoro`
-- Change port (optional): `docker run -e PORT=9000 -p 9000:9000 webdoro`
+- Clone: `git clone https://github.com/abra5umente/untimedapp`
+- Build: `docker build -t untimedapp .`
+- Run: `docker run --rm -p 8080:8080 untimedapp`
+- Change port (optional): `docker run -e PORT=9000 -p 9000:9000 untimedapp`
 - Image uses a non-root user and runs `uvicorn webapp.app:app` on port `8080` by default (configurable via `$PORT`).
-
-Mobile & Responsiveness
------------------------
-- Viewport and safe‑area support are enabled; the layout switches to a single column under `768px`.
-- Controls use a 2‑column grid on small screens and have 44px minimum hit targets.
-- The clock text dynamically resizes to fit its box without clipping.
-- Touch: the controls toggle is pointer/touch friendly and avoids accidental bounce animations on mobile.
 
 Google Cloud Run
 ----------------
@@ -94,16 +100,15 @@ Notes
 - Listens on `0.0.0.0:${PORT}` with default `PORT=8080` on Fly.
 - Health endpoint: `/healthz` is configured in `fly.toml` for checks.
 
-UI Basics
----------
-- `start work`, `take break`, `pause`/`resume`, `reset`, `clear`
-- Drawer toggles: `settings ▸/▾` and `statistics ▸/▾` open inside the left controls drawer
-- Notes toggle: `notes +/−` opens a two‑column notes panel (editor + live preview) next to the timer
-- Spacing between Settings, Notes, and Statistics toggles is consistent
-- Drawer closes when clicking outside of it
-- Settings include: durations, threshold, theme, scanlines (enable + opacity), and a sound enable/disable toggle (row highlights red when muted)
-- Notes auto‑save to `localStorage` per session; Save/Clear/Export buttons available; a "clear local data" button wipes all saved notes/cycles
- - Settings: durations, threshold, theme, scanlines (enable + opacity)
+**Extras**
+----------
+
+Mobile & Responsiveness
+-----------------------
+- Viewport and safe‑area support are enabled; the layout switches to a single column under `768px`.
+- Controls use a 2‑column grid on small screens and have 44px minimum hit targets.
+- The clock text dynamically resizes to fit its box without clipping.
+- Touch: the controls toggle is pointer/touch friendly and avoids accidental bounce animations on mobile.
 
 Visual FX & Background
 ----------------------
@@ -143,7 +148,6 @@ Progressive Web App (PWA)
 - Favicon: `/favicon.ico` route serves the 32×32 (or 16×16) PNG for legacy requests.
 
 Usage
-- Development: PWA works on `http(s)` and on `http://localhost`. Start the app and open it in Chrome/Edge/Firefox.
 - Install: Use the browser’s “Install app” prompt or menu.
 - Update SW cache: bump `CACHE_VERSION` in `service-worker.js` when you change static assets, then reload. In Chrome DevTools → Application → Service Workers you can trigger “Update/Skip Waiting”.
 - Unregister SW (dev): Chrome DevTools → Application → Service Workers → Unregister; or clear site data.
