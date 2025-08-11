@@ -37,7 +37,9 @@ With notes pane:
 In break mode:  
 <img width="1454" height="592" alt="image" src="https://github.com/user-attachments/assets/03de47a5-786f-41a7-918a-7a531b6d59d5" />  
 
-
+**Demo**
+--------
+[![Watch on Youtube](https://img.youtube.com/vi/ivJMenq9UMk/maxresdefault.jpg)](https://youtu.be/ivJMenq9UMk)
 
 Web App (FastAPI)
 -----------------
