@@ -29,6 +29,13 @@ Web App (FastAPI)
 - Run from repo root: `uvicorn webapp.app:app --host 0.0.0.0 --reload`
 - Open: `http://127.0.0.1:8000` locally or `http://<your-ip>:8000` on your LAN
 
+Docker
+------
+- Build: `docker build -t webdoro .`
+- Run: `docker run --rm -p 8000:8000 webdoro`
+- Change port (optional): `docker run -e PORT=9000 -p 9000:9000 webdoro`
+- Image uses a non-root user and runs `uvicorn webapp.app:app` on port `8000` by default.
+
 UI Basics
 ---------
 - `start work`, `take break`, `pause`/`resume`, `reset`, `clear`
