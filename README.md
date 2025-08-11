@@ -24,6 +24,21 @@ Highlights
  - Mobile‑ready UI: fluid layout under 768px, large touch targets, and a clock that dynamically fits its container.
  - Installable PWA with offline support via a service worker.
 
+**Screenshots**
+---------------
+Main timer:  
+<img width="916" height="569" alt="image" src="https://github.com/user-attachments/assets/cbbf275b-631d-4392-8297-9501de023666" />  
+Settings panel:  
+<img width="480" height="710" alt="image" src="https://github.com/user-attachments/assets/aaed971b-c406-4e1b-9754-09cde9875b45" />  
+Statistics panel:  
+<img width="435" height="279" alt="image" src="https://github.com/user-attachments/assets/9c584c30-d29e-417e-8d43-a367091066ad" />  
+With notes pane:  
+<img width="1416" height="596" alt="image" src="https://github.com/user-attachments/assets/3c3bdb2a-16cb-4685-8d49-af629a15ef2f" />  
+In break mode:  
+<img width="1454" height="592" alt="image" src="https://github.com/user-attachments/assets/03de47a5-786f-41a7-918a-7a531b6d59d5" />  
+
+
+
 Web App (FastAPI)
 -----------------
 - Requirements: Python 3.8+, `fastapi`, `uvicorn`
