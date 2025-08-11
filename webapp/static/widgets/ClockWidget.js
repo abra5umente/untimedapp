@@ -4,7 +4,7 @@ export class ClockWidget {
     this.pill = opts.pill || document.querySelector('#overtime-pill');
     this.container = this.root ? this.root.parentElement : null;
     this._basePx = 200; // baseline measure size
-    this._minPx = 80;
+    this._minPx = 36;   // allow much smaller on narrow screens
     this._maxPx = 360;
     this._raf = null;
     this._measure = null;
@@ -27,7 +27,8 @@ export class ClockWidget {
     if (this.container && this.root) {
       this._measure = document.createElement('div');
       this._measure.setAttribute('aria-hidden', 'true');
-      this._measure.className = this.root.className || '';
+      const baseClass = this.root.className || '';
+      this._measure.className = baseClass ? `${baseClass} clock-measure` : 'clock-measure';
       this._measure.style.position = 'absolute';
       this._measure.style.visibility = 'hidden';
       this._measure.style.pointerEvents = 'none';
@@ -113,27 +114,47 @@ export class ClockWidget {
     try {
       const cs = getComputedStyle(container);
       pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+      // also account for borders
+      pad += (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
     } catch {}
     const target = Math.max(0, cw - pad - 12); // small margin
 
     // Measure using hidden baseline node to avoid UI flicker
     let measured = 0;
+    let measuredH = 0;
     if (this._measure) {
+      // Use CSS class-based letter-spacing (em) to keep proportional scaling
       this._measure.style.fontSize = `${this._basePx}px`;
       const r = this._measure.getBoundingClientRect();
       measured = r.width || 1;
+      measuredH = r.height || 1;
     } else {
       // fallback: measure on root (may cause slight flicker on first fit)
       const prev = this.root.style.fontSize;
       this.root.style.fontSize = `${this._basePx}px`;
       const rect = this.root.getBoundingClientRect();
       measured = rect.width || 1;
+      measuredH = rect.height || 1;
       this.root.style.fontSize = prev;
     }
 
-    // Compute scale to fit and clamp
-    const scale = target / measured;
-    const next = Math.max(this._minPx, Math.min(this._maxPx, this._basePx * scale));
+    // Compute scale to fit width (and height if container has a meaningful height)
+    const scaleW = target / measured;
+    let scaleH = Infinity;
+    const ch = container.clientHeight;
+    if (ch && ch > 0) {
+      let vpad = 0;
+      try {
+        const cs = getComputedStyle(container);
+        vpad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)
+             + (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+      } catch {}
+      const targetH = Math.max(0, ch - vpad - 6);
+      if (measuredH && measuredH > 0) scaleH = targetH / measuredH;
+    }
+    const scale = Math.min(scaleW, scaleH);
+    const desired = this._basePx * scale;
+    const next = Math.max(this._minPx, Math.min(this._maxPx, isFinite(desired) && desired > 0 ? desired : this._minPx));
     this.root.style.fontSize = `${Math.floor(next)}px`;
   }
 }

@@ -21,6 +21,8 @@ Highlights
 - Smooth animations: Settings/Statistics dropdowns match the Notes rollout
 - Overtime badge without layout shift and stable clock sizing at 00:00
 - Simple beep notifications at work/break 00:00; toggle in Settings (muted state highlighted)
+ - Mobile‑ready UI: fluid layout under 768px, large touch targets, and a clock that dynamically fits its container.
+ - Installable PWA with offline support via a service worker.
 
 Web App (FastAPI)
 -----------------
@@ -35,6 +37,13 @@ Docker
 - Run: `docker run --rm -p 8080:8080 webdoro`
 - Change port (optional): `docker run -e PORT=9000 -p 9000:9000 webdoro`
 - Image uses a non-root user and runs `uvicorn webapp.app:app` on port `8080` by default (configurable via `$PORT`).
+
+Mobile & Responsiveness
+-----------------------
+- Viewport and safe‑area support are enabled; the layout switches to a single column under `768px`.
+- Controls use a 2‑column grid on small screens and have 44px minimum hit targets.
+- The clock text dynamically resizes to fit its box without clipping.
+- Touch: the controls toggle is pointer/touch friendly and avoids accidental bounce animations on mobile.
 
 Google Cloud Run
 ----------------
@@ -103,11 +112,30 @@ These load from jsDelivr CDN by default in `webapp/static/index.html`.
 
 - Offline/self‑hosted option: download the scripts to `webapp/static/vendor/` and update the `<script>` tags to point at `/static/vendor/...`.
 - SRI hashes: if you add `integrity` attributes, ensure the hashes match the exact files you serve; otherwise the browser will block them.
+ - Offline behavior: the service worker caches the app shell and will cache CDN scripts on first use (stale‑while‑revalidate). For guaranteed offline Markdown preview on first run, self‑host these scripts.
+
+Progressive Web App (PWA)
+-------------------------
+- Installable on supported browsers; offline capable for the core app shell.
+- Manifest: `webapp/static/manifest.webmanifest` (served at `/manifest.webmanifest`).
+- Service worker: `webapp/static/service-worker.js` (served at `/service-worker.js`) with cache versioning via `CACHE_VERSION`.
+- Icons (PNG): under `webapp/static/icons/`.
+  - `favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png`
+  - `android-chrome-192x192.png`, `android-chrome-512x512.png`
+  - Maskable: `untimed_maskable.png` (1280×1280) declared with `purpose: "maskable any"`.
+- Favicon: `/favicon.ico` route serves the 32×32 (or 16×16) PNG for legacy requests.
+
+Usage
+- Development: PWA works on `http(s)` and on `http://localhost`. Start the app and open it in Chrome/Edge/Firefox.
+- Install: Use the browser’s “Install app” prompt or menu.
+- Update SW cache: bump `CACHE_VERSION` in `service-worker.js` when you change static assets, then reload. In Chrome DevTools → Application → Service Workers you can trigger “Update/Skip Waiting”.
+- Unregister SW (dev): Chrome DevTools → Application → Service Workers → Unregister; or clear site data.
 
 Code Structure
 --------------
 - `pymodoro/`: Core timer engine (`timer_core.py`)
 - `webapp/`: FastAPI backend and static SPA (`/static`)
+  - PWA: `manifest.webmanifest`, `service-worker.js`, icons under `static/icons/`
 
 Privacy
 -------

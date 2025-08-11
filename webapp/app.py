@@ -16,8 +16,9 @@ app = FastAPI(title="timerless.app")
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 repo_root = os.path.dirname(os.path.dirname(__file__))
-static_favicon_path = os.path.join(static_dir, "favicon.ico")
-root_favicon_path = os.path.join(repo_root, "favicon.ico")
+icons_dir = os.path.join(static_dir, "icons")
+png_favicon_32 = os.path.join(icons_dir, "favicon-32x32.png")
+png_favicon_16 = os.path.join(icons_dir, "favicon-16x16.png")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
@@ -57,11 +58,28 @@ def index():
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    # Prefer favicon served from /static when present; fallback to repo root
-    path = static_favicon_path if os.path.exists(static_favicon_path) else root_favicon_path
+    # Serve PNG favicon for agents that still hit /favicon.ico
+    path = png_favicon_32 if os.path.exists(png_favicon_32) else png_favicon_16
     if os.path.exists(path):
-        return FileResponse(path, media_type="image/x-icon")
-    # Not found: return 404 via Starlette
+        return FileResponse(path, media_type="image/png")
+    from starlette.responses import Response
+    return Response(status_code=404)
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def manifest():
+    path = os.path.join(static_dir, "manifest.webmanifest")
+    if os.path.exists(path):
+        return FileResponse(path, media_type="application/manifest+json")
+    from starlette.responses import Response
+    return Response(status_code=404)
+
+
+@app.get("/service-worker.js", include_in_schema=False)
+def service_worker():
+    path = os.path.join(static_dir, "service-worker.js")
+    if os.path.exists(path):
+        return FileResponse(path, media_type="application/javascript")
     from starlette.responses import Response
     return Response(status_code=404)
 

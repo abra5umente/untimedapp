@@ -693,7 +693,17 @@ import { ClockWidget } from './widgets/ClockWidget.js';
       updateDrawerPadding();
     };
     setOpen(false);
-    toggle.addEventListener('click', () => setOpen(!drawer.classList.contains('open')));
+    // Robust touch/pointer/click handler for mobile Chrome
+    const onToggle = (ev) => {
+      try { ev.preventDefault(); ev.stopPropagation(); } catch {}
+      setOpen(!drawer.classList.contains('open'));
+    };
+    if (window.PointerEvent) {
+      toggle.addEventListener('pointerup', onToggle);
+    } else {
+      toggle.addEventListener('touchend', onToggle, { passive: false });
+      toggle.addEventListener('click', onToggle);
+    }
     if (closeBtn) closeBtn.addEventListener('click', () => setOpen(false));
 
     // Close on outside click/tap when open

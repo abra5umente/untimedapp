@@ -20,9 +20,6 @@ COPY pymodoro ./pymodoro
 COPY webapp ./webapp
 COPY README.md ./README.md
 COPY LICENSE ./LICENSE
-COPY favicon.ico ./favicon.ico
-# Also place favicon in static for direct serving
-COPY favicon.ico ./webapp/static/favicon.ico
 
 # Create a non-root user for security
 RUN useradd -m -u 10001 appuser
