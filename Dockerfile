@@ -20,6 +20,9 @@ COPY pymodoro ./pymodoro
 COPY webapp ./webapp
 COPY README.md ./README.md
 COPY LICENSE ./LICENSE
+COPY favicon.ico ./favicon.ico
+# Also place favicon in static for direct serving
+COPY favicon.ico ./webapp/static/favicon.ico
 
 # Create a non-root user for security
 RUN useradd -m -u 10001 appuser
@@ -27,6 +30,6 @@ USER appuser
 
 EXPOSE 8000
 
-# Allow overriding port with $PORT (e.g., on PaaS)
-CMD ["sh", "-c", "uvicorn webapp.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
-
+# Allow overriding port with $PORT (Cloud Run sets 8080)
+# Respect proxy headers from Cloud Run/Load Balancer
+CMD ["sh", "-c", "uvicorn webapp.app:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]

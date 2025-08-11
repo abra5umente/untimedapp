@@ -15,6 +15,9 @@ app = FastAPI(title="timerless.app")
 
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
+repo_root = os.path.dirname(os.path.dirname(__file__))
+static_favicon_path = os.path.join(static_dir, "favicon.ico")
+root_favicon_path = os.path.join(repo_root, "favicon.ico")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
@@ -50,6 +53,26 @@ timer.on_event = _on_event
 @app.get("/")
 def index():
     return FileResponse(os.path.join(static_dir, "index.html"))
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    # Prefer favicon served from /static when present; fallback to repo root
+    path = static_favicon_path if os.path.exists(static_favicon_path) else root_favicon_path
+    if os.path.exists(path):
+        return FileResponse(path, media_type="image/x-icon")
+    # Not found: return 404 via Starlette
+    from starlette.responses import Response
+    return Response(status_code=404)
+
+
+@app.get("/healthz", include_in_schema=False)
+def healthz():
+    """Lightweight health check endpoint for Cloud Run.
+
+    Returns 200 OK with a simple JSON body. No side effects.
+    """
+    return {"ok": True}
 
 
 @app.get("/api/state")

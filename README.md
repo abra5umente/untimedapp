@@ -36,6 +36,22 @@ Docker
 - Change port (optional): `docker run -e PORT=9000 -p 9000:9000 webdoro`
 - Image uses a non-root user and runs `uvicorn webapp.app:app` on port `8000` by default.
 
+Google Cloud Run
+----------------
+Deploy using Cloud Build + Cloud Run (requires `gcloud`):
+
+1. Set your project and region:
+   - `gcloud config set project <PROJECT_ID>`
+   - `gcloud config set run/region <REGION>` (e.g., `us-central1`)
+2. Build the image:
+   - `gcloud builds submit --tag gcr.io/<PROJECT_ID>/webdoro:latest`
+3. Deploy to Cloud Run (fully managed):
+   - `gcloud run deploy webdoro --image gcr.io/<PROJECT_ID>/webdoro:latest --platform managed --allow-unauthenticated`
+
+Notes
+- The container listens on `$PORT` (Cloud Run sets `8080`), binds `0.0.0.0`, and respects proxy headers.
+- Health endpoint: `/healthz` returns `{ "ok": true }`.
+
 UI Basics
 ---------
 - `start work`, `take break`, `pause`/`resume`, `reset`, `clear`
