@@ -28,8 +28,8 @@ COPY favicon.ico ./webapp/static/favicon.ico
 RUN useradd -m -u 10001 appuser
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8080
 
 # Allow overriding port with $PORT (Cloud Run sets 8080)
 # Respect proxy headers from Cloud Run/Load Balancer
-CMD ["sh", "-c", "uvicorn webapp.app:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "uvicorn webapp.app:app --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers --forwarded-allow-ips='*'"]

@@ -1,0 +1,32 @@
+app = "untimedapp"
+
+# You can change this to your preferred region, e.g., "sjc", "iad", "lhr"
+# Run `fly regions list` to see options; this can be adjusted after launch.
+primary_region = "iad"
+
+[build]
+  # Uses the Dockerfile in the repo root
+
+[env]
+  # Fly sets PORT=8080 by default; the Dockerfile respects this.
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 50
+    soft_limit = 40
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/healthz"
+    interval = "10s"
+    timeout = "2s"
+

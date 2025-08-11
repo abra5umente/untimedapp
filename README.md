@@ -32,9 +32,9 @@ Web App (FastAPI)
 Docker
 ------
 - Build: `docker build -t webdoro .`
-- Run: `docker run --rm -p 8000:8000 webdoro`
+- Run: `docker run --rm -p 8080:8080 webdoro`
 - Change port (optional): `docker run -e PORT=9000 -p 9000:9000 webdoro`
-- Image uses a non-root user and runs `uvicorn webapp.app:app` on port `8000` by default.
+- Image uses a non-root user and runs `uvicorn webapp.app:app` on port `8080` by default (configurable via `$PORT`).
 
 Google Cloud Run
 ----------------
@@ -51,6 +51,22 @@ Deploy using Cloud Build + Cloud Run (requires `gcloud`):
 Notes
 - The container listens on `$PORT` (Cloud Run sets `8080`), binds `0.0.0.0`, and respects proxy headers.
 - Health endpoint: `/healthz` returns `{ "ok": true }`.
+
+Fly.io
+------
+Deploy using Fly Machines (requires `flyctl`):
+
+1. Install: https://fly.io/docs/hands-on/install-flyctl/
+2. Initialize (uses included Dockerfile and `fly.toml`):
+   - `fly launch --no-deploy` (choose a region and app name or keep `untimedapp`)
+3. Deploy:
+   - `fly deploy`
+4. Open:
+   - `fly open`
+
+Notes
+- Listens on `0.0.0.0:${PORT}` with default `PORT=8080` on Fly.
+- Health endpoint: `/healthz` is configured in `fly.toml` for checks.
 
 UI Basics
 ---------
